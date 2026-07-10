@@ -27,7 +27,8 @@ describe('Auth Endpoints', () => {
 
       expect(res.statusCode).toEqual(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.email).toEqual('test@test.com');
+      expect(res.body.data.user.email).toEqual('test@test.com');
+      expect(typeof res.body.data.token).toBe('string');
     });
 
     it('should fail if email already exists', async () => {
@@ -63,7 +64,8 @@ describe('Auth Endpoints', () => {
 
       expect(res.statusCode).toEqual(200);
       expect(res.body.success).toBe(true);
-      // Wait for JWT phase to check token, for now just success
+      expect(typeof res.body.data.token).toBe('string');
+      expect(res.body.data.user.email).toEqual('test@test.com');
     });
 
     it('should fail with wrong email', async () => {
