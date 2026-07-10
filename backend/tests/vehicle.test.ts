@@ -12,9 +12,11 @@ const mockQuery = query as jest.Mock;
 describe('Vehicle Endpoints (Read Operations)', () => {
   const JWT_SECRET = process.env.JWT_SECRET || 'testsecret';
   let validToken: string;
+  let adminToken: string;
 
   beforeAll(() => {
     validToken = jwt.sign({ id: 'user123', role: 'USER' }, JWT_SECRET);
+    adminToken = jwt.sign({ id: 'admin123', role: 'ADMIN' }, JWT_SECRET);
   });
 
   beforeEach(() => {
@@ -82,6 +84,92 @@ describe('Vehicle Endpoints (Read Operations)', () => {
       expect(res.statusCode).toEqual(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.make).toEqual('Toyota');
+    });
+  });
+
+  describe('POST /api/vehicles', () => {
+    it('should return 403 if user is not an ADMIN', async () => {
+      const res = await request(app)
+        .post('/api/vehicles')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ make: 'Ford', model: 'Focus', category: 'Hatchback', price: 15000, quantity: 2 });
+
+      expect(res.statusCode).toEqual(403);
+    });
+
+    it('should create a vehicle if user is ADMIN', async () => {
+      const newVehicle = {
+        id: 'v3',
+        make: 'Ford',
+        model: 'Focus',
+        category: 'Hatchback',
+        price: '15000',
+        quantity: 2,
+      };
+      mockQuery.mockResolvedValueOnce({ rows: [newVehicle] });
+
+      const res = await request(app)
+        .post('/api/vehicles')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ make: 'Ford', model: 'Focus', category: 'Hatchback', price: 15000, quantity: 2 });
+
+      expect(res.statusCode).toEqual(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.make).toEqual('Ford');
+    });
+  });
+
+  describe('PUT /api/vehicles/:id', () => {
+    it('should return 403 if user is not an ADMIN', async () => {
+      const res = await request(app)
+        .put('/api/vehicles/v1')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ price: 20000 });
+
+      expect(res.statusCode).toEqual(403);
+    });
+
+    it('should update a vehicle if user is ADMIN', async () => {
+      const updatedVehicle = {
+        id: 'v1',
+        make: 'Toyota',
+        model: 'Camry',
+        category: 'Sedan',
+        price: '20000',
+        quantity: 5,
+      };
+      mockQuery.mockResolvedValueOnce({ rows: [updatedVehicle] });
+
+      const res = await request(app)
+        .put('/api/vehicles/v1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ price: 20000 });
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.price).toEqual('20000');
+    });
+  });
+
+  describe('DELETE /api/vehicles/:id', () => {
+    it('should return 403 if user is not an ADMIN', async () => {
+      const res = await request(app)
+        .delete('/api/vehicles/v1')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(res.statusCode).toEqual(403);
+    });
+
+    it('should delete a vehicle if user is ADMIN', async () => {
+      mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+
+      const res = await request(app)
+        .delete('/api/vehicles/v1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toEqual('Vehicle deleted successfully');
     });
   });
 });
