@@ -1,18 +1,14 @@
 import request from 'supertest';
 import app from '../src/app';
+import bcrypt from 'bcrypt';
 
-const mockQuery = jest.fn();
-jest.mock('pg', () => {
-  return {
-    Pool: jest.fn(() => ({
-      query: mockQuery,
-      on: jest.fn(),
-      end: jest.fn(),
-    })),
-  };
-});
+jest.mock('../src/config/db', () => ({
+  query: jest.fn(),
+}));
 
-import { Pool } from 'pg';
+import { query } from '../src/config/db';
+
+const mockQuery = query as jest.Mock;
 
 describe('Auth Endpoints', () => {
   beforeEach(() => {
@@ -50,14 +46,13 @@ describe('Auth Endpoints', () => {
 
   describe('POST /api/auth/login', () => {
     it('should login successfully', async () => {
-      // Mock the DB to return a user with a hashed password
-      // $2b$10$wJtQzE9bE5xZ5OqVwP4XKu5Ew/C9xN0Xk5rW3ZzG7O3ZzG7O3ZzG7 (bcrypt for 'password123')
+      const hashedPw = await bcrypt.hash('password123', 10);
       mockQuery.mockResolvedValueOnce({
         rows: [
           {
             id: '123',
             email: 'test@test.com',
-            password: '$2b$10$wJtQzE9bE5xZ5OqVwP4XKu5Ew/C9xN0Xk5rW3ZzG7O3ZzG7O3ZzG7',
+            password: hashedPw,
           },
         ],
       });
@@ -83,12 +78,13 @@ describe('Auth Endpoints', () => {
     });
 
     it('should fail with wrong password', async () => {
+      const hashedPw = await bcrypt.hash('password123', 10);
       mockQuery.mockResolvedValueOnce({
         rows: [
           {
             id: '123',
             email: 'test@test.com',
-            password: '$2b$10$wJtQzE9bE5xZ5OqVwP4XKu5Ew/C9xN0Xk5rW3ZzG7O3ZzG7O3ZzG7',
+            password: hashedPw,
           },
         ],
       });
