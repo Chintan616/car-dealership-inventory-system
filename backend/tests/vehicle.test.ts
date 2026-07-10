@@ -172,4 +172,74 @@ describe('Vehicle Endpoints (Read Operations)', () => {
       expect(res.body.message).toEqual('Vehicle deleted successfully');
     });
   });
+
+  describe('GET /api/vehicles/search', () => {
+    it('should filter vehicles by make', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ make: 'Ford', model: 'Focus' }] });
+      const res = await request(app)
+        .get('/api/vehicles/search?make=Ford')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data[0].make).toEqual('Ford');
+    });
+  });
+
+  describe('POST /api/vehicles/:id/purchase', () => {
+    it('should fail if vehicle is out of stock', async () => {
+      // Mock finding the vehicle with 0 quantity
+      mockQuery.mockResolvedValueOnce({ rows: [{ quantity: 0 }] });
+
+      const res = await request(app)
+        .post('/api/vehicles/v1/purchase')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(res.statusCode).toEqual(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toEqual('Vehicle is out of stock');
+    });
+
+    it('should decrement stock on successful purchase', async () => {
+      // Mock finding the vehicle
+      mockQuery.mockResolvedValueOnce({ rows: [{ id: 'v1', quantity: 5 }] });
+      // Mock updating the vehicle
+      mockQuery.mockResolvedValueOnce({ rows: [{ id: 'v1', quantity: 4 }] });
+
+      const res = await request(app)
+        .post('/api/vehicles/v1/purchase')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.quantity).toEqual(4);
+    });
+  });
+
+  describe('POST /api/vehicles/:id/restock', () => {
+    it('should return 403 if user is not an ADMIN', async () => {
+      const res = await request(app)
+        .post('/api/vehicles/v1/restock')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ amount: 5 });
+
+      expect(res.statusCode).toEqual(403);
+    });
+
+    it('should increment stock if user is ADMIN', async () => {
+      // Mock finding the vehicle
+      mockQuery.mockResolvedValueOnce({ rows: [{ id: 'v1', quantity: 5 }] });
+      // Mock updating the vehicle
+      mockQuery.mockResolvedValueOnce({ rows: [{ id: 'v1', quantity: 10 }] });
+
+      const res = await request(app)
+        .post('/api/vehicles/v1/restock')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ amount: 5 });
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.quantity).toEqual(10);
+    });
+  });
 });
