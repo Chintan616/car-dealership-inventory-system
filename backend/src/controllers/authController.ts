@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { query } from '../config/db';
+import { generateToken } from '../utils/jwt';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -23,10 +24,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       [name, email, hashedPassword],
     );
 
+    const user = newUser.rows[0];
+    const token = generateToken({ id: user.id, role: user.role });
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      data: newUser.rows[0],
+      data: {
+        user,
+        token,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -54,11 +61,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Phase 5 will add JWT here
+    const token = generateToken({ id: user.id, role: user.role });
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      data: { id: user.id, email: user.email, role: user.role },
+      data: {
+        user: { id: user.id, email: user.email, role: user.role },
+        token,
+      },
     });
   } catch (error) {
     console.error(error);
