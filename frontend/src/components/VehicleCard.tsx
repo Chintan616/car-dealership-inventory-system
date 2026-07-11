@@ -18,10 +18,9 @@ export interface Vehicle {
 interface VehicleCardProps {
   vehicle: Vehicle;
   onPurchase: () => void;
-  index: number;
 }
 
-export function VehicleCard({ vehicle, onPurchase, index }: VehicleCardProps) {
+export function VehicleCard({ vehicle, onPurchase }: VehicleCardProps) {
   const [isPurchasing, setIsPurchasing] = useState(false);
 
   // Use custom image or fallback to a static car placeholder

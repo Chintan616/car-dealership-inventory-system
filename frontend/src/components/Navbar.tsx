@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, LogIn, UserPlus, Shield } from 'lucide-react';
+import { LogOut, LogIn, UserPlus } from 'lucide-react';
 
 export function Navbar() {
   const { user, logout } = useAuth();
