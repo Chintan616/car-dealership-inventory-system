@@ -30,10 +30,10 @@ export const getVehicleById = async (req: Request, res: Response): Promise<void>
 
 export const createVehicle = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { make, model, category, price, quantity } = req.body;
+    const { make, model, category, price, quantity, image_url } = req.body;
     const result = await query(
-      'INSERT INTO vehicles (make, model, category, price, quantity) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [make, model, category, price, quantity],
+      'INSERT INTO vehicles (make, model, category, price, quantity, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [make, model, category, price, quantity, image_url],
     );
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -45,12 +45,12 @@ export const createVehicle = async (req: Request, res: Response): Promise<void> 
 export const updateVehicle = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { make, model, category, price, quantity } = req.body;
+    const { make, model, category, price, quantity, image_url } = req.body;
 
     // For simplicity, updating all fields, but in reality you'd build a dynamic query or coalesce
     const result = await query(
-      'UPDATE vehicles SET make = COALESCE($1, make), model = COALESCE($2, model), category = COALESCE($3, category), price = COALESCE($4, price), quantity = COALESCE($5, quantity), updated_at = NOW() WHERE id = $6 RETURNING *',
-      [make, model, category, price, quantity, id],
+      'UPDATE vehicles SET make = COALESCE($1, make), model = COALESCE($2, model), category = COALESCE($3, category), price = COALESCE($4, price), quantity = COALESCE($5, quantity), image_url = COALESCE($6, image_url), updated_at = NOW() WHERE id = $7 RETURNING *',
+      [make, model, category, price, quantity, image_url, id],
     );
 
     if (result.rows.length === 0) {
@@ -84,17 +84,13 @@ export const deleteVehicle = async (req: Request, res: Response): Promise<void> 
 
 export const searchVehicles = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { make, model, category, minPrice, maxPrice } = req.query;
+    const { search, category, minPrice, maxPrice } = req.query;
     let sql = 'SELECT * FROM vehicles WHERE 1=1';
     const params: any[] = [];
 
-    if (make) {
-      params.push(make);
-      sql += ` AND make ILIKE $${params.length}`;
-    }
-    if (model) {
-      params.push(model);
-      sql += ` AND model ILIKE $${params.length}`;
+    if (search) {
+      params.push(`%${search}%`);
+      sql += ` AND (make ILIKE $${params.length} OR model ILIKE $${params.length} OR category ILIKE $${params.length})`;
     }
     if (category) {
       params.push(category);

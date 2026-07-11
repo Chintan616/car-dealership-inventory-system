@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, ShoppingCart } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export interface Vehicle {
   id: number;
@@ -13,109 +12,94 @@ export interface Vehicle {
   price: number;
   quantity: number;
   category: string;
+  image_url?: string;
 }
 
 interface VehicleCardProps {
   vehicle: Vehicle;
-  onPurchase: (id: number) => Promise<void>;
+  onPurchase: () => void;
   index: number;
 }
 
 export function VehicleCard({ vehicle, onPurchase, index }: VehicleCardProps) {
   const [isPurchasing, setIsPurchasing] = useState(false);
 
-  // Use unspash source for placeholder images based on make and model
-  const imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(vehicle.make + ' ' + vehicle.model + ' car')}`;
+  // Use custom image or fallback to a static car placeholder
+  const imageUrl =
+    vehicle.image_url ||
+    'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
 
   const isOutOfStock = vehicle.quantity <= 0;
+  const isLowStock = vehicle.quantity > 0 && vehicle.quantity <= 2;
 
   const handlePurchase = async () => {
     setIsPurchasing(true);
-    await onPurchase(vehicle.id);
-    setIsPurchasing(false);
+    try {
+      const response = await api.post(`/vehicles/${vehicle.id}/purchase`);
+      if (response.data.success) {
+        toast.success(`Successfully reserved ${vehicle.make} ${vehicle.model}!`);
+        onPurchase();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to process reservation');
+    } finally {
+      setIsPurchasing(false);
+    }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.05, ease: 'easeOut' }}
-      whileHover={{ y: -5 }}
-      className="group h-full"
-    >
-      <Card className="h-full flex flex-col overflow-hidden border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20">
-        {/* Image Container */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          <img
-            src={imageUrl}
-            alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-            className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
-            loading="lazy"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://source.unsplash.com/800x600/?car';
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    <div className="group flex flex-col gap-4">
+      {/* Image Box */}
+      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-900 border border-border/20">
+        <img
+          src={imageUrl}
+          alt={`${vehicle.make} ${vehicle.model}`}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100"
+        />
 
-          {/* Stock Badges */}
-          <div className="absolute top-3 right-3 flex flex-col gap-2">
-            {isOutOfStock ? (
-              <Badge variant="destructive" className="shadow-lg backdrop-blur-md bg-destructive/90">
-                Out of Stock
-              </Badge>
-            ) : vehicle.quantity <= 2 ? (
-              <Badge
-                variant="destructive"
-                className="shadow-lg backdrop-blur-md bg-orange-500/90 text-white hover:bg-orange-600"
-              >
-                Only {vehicle.quantity} left
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="shadow-lg backdrop-blur-md bg-secondary/90">
-                In Stock ({vehicle.quantity})
-              </Badge>
-            )}
-            <Badge
-              variant="outline"
-              className="shadow-lg backdrop-blur-md bg-background/80 self-end"
-            >
-              {vehicle.category}
-            </Badge>
-          </div>
+        {/* Top Badges */}
+        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+          {isOutOfStock ? (
+            <div className="bg-background/90 backdrop-blur text-foreground text-[10px] font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full border border-border/50 shadow-lg">
+              Out of Stock
+            </div>
+          ) : isLowStock ? (
+            <div className="bg-primary text-primary-foreground text-[10px] font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(255,51,51,0.5)]">
+              Only {vehicle.quantity} Left
+            </div>
+          ) : (
+            <div className="bg-background/80 backdrop-blur text-foreground text-[10px] font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full border border-border/50 shadow-lg">
+              Available
+            </div>
+          )}
         </div>
 
-        {/* Content */}
-        <CardContent className="flex-1 p-5 space-y-2">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-primary mb-1">{vehicle.year}</p>
-              <h3 className="text-xl font-bold tracking-tight line-clamp-1">
-                {vehicle.make} <span className="font-light">{vehicle.model}</span>
-              </h3>
-            </div>
-          </div>
-          <div className="pt-2 flex items-baseline gap-1">
-            <span className="text-2xl font-bold">${Number(vehicle.price).toLocaleString()}</span>
-          </div>
-        </CardContent>
-
-        {/* Action */}
-        <CardFooter className="p-5 pt-0">
+        {/* Hover Overlay Actions */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
           <Button
-            className="w-full transition-all active:scale-[0.98]"
-            disabled={isOutOfStock || isPurchasing}
             onClick={handlePurchase}
-            variant={isOutOfStock ? 'secondary' : 'default'}
+            disabled={isOutOfStock || isPurchasing}
+            className="w-full bg-foreground text-background hover:bg-white rounded-full h-12 font-medium"
           >
             {isPurchasing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <ShoppingCart className="mr-2 h-4 w-4" />
+              'Initiate Acquisition'
             )}
-            {isOutOfStock ? 'Sold Out' : 'Purchase'}
           </Button>
-        </CardFooter>
-      </Card>
-    </motion.div>
+        </div>
+      </div>
+
+      {/* Details Box */}
+      <div className="flex flex-col px-2">
+        <h3 className="text-lg font-light tracking-wide text-foreground">
+          <span className="font-medium">{vehicle.make}</span> {vehicle.model}
+        </h3>
+        <p className="text-muted-foreground text-sm mb-2">
+          {vehicle.year} • {vehicle.category}
+        </p>
+        <p className="text-xl font-serif">${vehicle.price.toLocaleString()}</p>
+      </div>
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Dashboard from '@/pages/Dashboard';
+import AdminDashboard from '@/pages/AdminDashboard';
 
 function App() {
   return (
@@ -23,10 +24,7 @@ function App() {
 
           {/* Protected Routes (Admin only) */}
           <Route element={<ProtectedRoute adminOnly />}>
-            <Route
-              path="/admin"
-              element={<div className="p-4 text-center">Admin Dashboard Placeholder</div>}
-            />
+            <Route path="/admin" element={<AdminDashboard />} />
           </Route>
 
           {/* Fallback */}

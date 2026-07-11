@@ -4,100 +4,94 @@ import { Layout } from '@/components/Layout';
 import { FilterBar, type FilterState } from '@/components/FilterBar';
 import { VehicleCard, type Vehicle } from '@/components/VehicleCard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CarFront } from 'lucide-react';
-import { toast } from 'sonner';
 
 export default function Dashboard() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filters, setFilters] = useState<FilterState>({ make: '', category: '' });
+  const [filters, setFilters] = useState<FilterState>({
+    search: '',
+    category: '',
+    minPrice: '',
+    maxPrice: '',
+  });
 
   const fetchVehicles = async () => {
     setIsLoading(true);
     try {
-      // Build query string
       const params = new URLSearchParams();
-      if (filters.make) params.append('make', filters.make);
+      if (filters.search) params.append('search', filters.search);
       if (filters.category) params.append('category', filters.category);
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
 
       const response = await api.get(`/vehicles/search?${params.toString()}`);
       if (response.data.success) {
         setVehicles(response.data.data);
       }
     } catch (error) {
-      toast.error('Failed to load vehicles');
-      setVehicles([]);
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Debounce search fetching
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const delayDebounceFn = setTimeout(() => {
       fetchVehicles();
-    }, 300);
-    return () => clearTimeout(timer);
+    }, 400);
+    return () => clearTimeout(delayDebounceFn);
   }, [filters]);
-
-  const handlePurchase = async (id: number) => {
-    try {
-      const response = await api.post(`/vehicles/${id}/purchase`);
-      if (response.data.success) {
-        toast.success('Vehicle purchased successfully!');
-        // Optimistically update stock
-        setVehicles((prev) =>
-          prev.map((v) => (v.id === id ? { ...v, quantity: v.quantity - 1 } : v)),
-        );
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to purchase vehicle');
-    }
-  };
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight mb-2">Inventory</h1>
-          <p className="text-muted-foreground text-lg">Browse and manage premium vehicles.</p>
+      <div className="container mx-auto px-6 py-12 lg:py-20">
+        {/* Veloce Hero Header */}
+        <div className="max-w-3xl mb-16">
+          <h4 className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-6">
+            The Archive • Vol. IV
+          </h4>
+          <h1 className="font-serif text-6xl lg:text-7xl tracking-tight mb-6">
+            Curated <span className="italic font-light">Velocity</span>
+          </h1>
+          <p className="text-muted-foreground text-xl font-light leading-relaxed max-w-2xl">
+            A forensic selection of performance machinery. Every listing verified for mechanical
+            integrity and heritage provenance.
+          </p>
         </div>
 
         <FilterBar filters={filters} setFilters={setFilters} />
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-              <div key={n} className="flex flex-col space-y-3">
-                <Skeleton className="h-[250px] w-full rounded-xl" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-[250px]" />
-                  <Skeleton className="h-4 w-[200px]" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="flex flex-col gap-4">
+                <Skeleton className="aspect-[4/3] rounded-2xl bg-card border border-border/20" />
+                <div className="space-y-2 px-2">
+                  <Skeleton className="h-5 w-2/3 bg-card" />
+                  <Skeleton className="h-4 w-1/3 bg-card" />
+                  <Skeleton className="h-6 w-1/2 bg-card mt-2" />
                 </div>
               </div>
             ))}
           </div>
-        ) : vehicles.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        ) : vehicles.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center border-t border-border/50">
+            <h3 className="text-2xl font-serif mb-2">No Machinery Found</h3>
+            <p className="text-muted-foreground max-w-md mx-auto font-light">
+              We couldn't locate any vehicles matching your precise specifications. The archive is
+              constantly evolving.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 gap-y-12">
             {vehicles.map((vehicle, index) => (
               <VehicleCard
                 key={vehicle.id}
                 vehicle={vehicle}
                 index={index}
-                onPurchase={handlePurchase}
+                onPurchase={fetchVehicles}
               />
             ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="bg-muted p-6 rounded-full mb-6">
-              <CarFront className="h-12 w-12 text-muted-foreground opacity-50" />
-            </div>
-            <h2 className="text-2xl font-semibold mb-2">No vehicles found</h2>
-            <p className="text-muted-foreground max-w-sm">
-              We couldn't find any vehicles matching your current filters. Try adjusting your search
-              criteria.
-            </p>
           </div>
         )}
       </div>
