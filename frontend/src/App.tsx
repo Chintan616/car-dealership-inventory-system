@@ -5,20 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
-
-// Temporary Dashboard Placeholder
-function Dashboard() {
-  const { user, logout } = useAuth();
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 space-y-4">
-      <h1 className="text-3xl font-bold tracking-tight">Welcome, {user?.name}</h1>
-      <p className="text-muted-foreground">Your Role: {user?.role}</p>
-      <button onClick={logout} className="text-destructive hover:underline">
-        Log out
-      </button>
-    </div>
-  );
-}
+import Dashboard from '@/pages/Dashboard';
 
 function App() {
   return (
